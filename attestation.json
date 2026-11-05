@@ -1,9 +1,9 @@
 {
   "pluginId": "neodex.compote",
   "repo": "NDesumeur/neodex-plugin-compote",
-  "version": "1.0.0",
-  "sha256": "3fde6e8367f9631a1d2ddc7aa922af22d777c56cd976eaac52eaae69e7bb1bad",
-  "approvedAt": "2026-11-05T09:31:43.535Z",
+  "version": "1.0.1",
+  "sha256": "c86c9009d2914b18c7d98fc768c14a43e00fa959b125a5faa6a4ca2d3ec22061",
+  "approvedAt": "2026-11-05T12:12:55.272Z",
   "neobase": ">=4.0.0",
-  "signature": "QrIGU/APDdvXKpA5fYkkBoV8ZZrqTrka1vqMwtSPpoFjwtRqru4/N0l7gfThIVgWRX4AG1orjA2tIaUO7eiABw=="
+  "signature": "pjqXdeccgRjTL+UTFi7YMoZG6ngx40tAPMd1rg5LrwnOjG8tM+DEDuLU+QgSZ9yAnF2zahtG+6bUD6dxnCFTBA=="
 }

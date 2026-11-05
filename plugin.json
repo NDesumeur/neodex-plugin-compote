@@ -1,7 +1,7 @@
 {
   "id": "neodex.compote",
   "name": "Compote",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": "NDesumeur",
   "description": "Lâche des fruits dans la caisse : deux fruits pareils qui se touchent fusionnent en un plus gros. De la cerise à la citrouille, sans dépasser la ligne.",
   "icon": "icon.png",

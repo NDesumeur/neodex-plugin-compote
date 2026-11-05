@@ -444,7 +444,8 @@ function coDraw() {
 function coInfo() {
   $('coStats').replaceChildren(...[['Meilleur score', games.best.compote || 0], ['Parties', cos.games], ['Plus gros fruit', FRUITS[cos.top][0]]].flatMap(([a, b]) => [el('span', '', a), el('b', '', String(b))]));
   const c = $('coChain'), g = c.getContext('2d'); g.clearRect(0, 0, c.width, c.height); let x = 2;
-  FRUITS.forEach(([, r], i) => { const s = Math.min(1, 9 / r), w = (r * 2 + 10) * s; g.globalAlpha = i <= cos.top + 1 ? 1 : .3; g.drawImage(CO_SPR[i], x, 24 - w / 2, w, w); x += w + 1; }); g.globalAlpha = 1;
+  const ws = FRUITS.map(([, r]) => (r * 2 + 10) * Math.min(1, 9 / r)), k = Math.min(1, (c.width - 4 - FRUITS.length) / ws.reduce((a, b) => a + b));  // les 11 fruits tiennent dans la largeur
+  FRUITS.forEach((f, i) => { const w = ws[i] * k; g.globalAlpha = i <= cos.top + 1 ? 1 : .3; g.drawImage(CO_SPR[i], x, 24 - w / 2, w, w); x += w + 1; }); g.globalAlpha = 1;
 }
 const coKeys = {};
 const cv = $('coCanvas');

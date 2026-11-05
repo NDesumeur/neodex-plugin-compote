@@ -1,0 +1,20 @@
+{
+  "id": "neodex.compote",
+  "name": "Compote",
+  "version": "1.0.0",
+  "author": "NDesumeur",
+  "description": "Lâche des fruits dans la caisse : deux fruits pareils qui se touchent fusionnent en un plus gros. De la cerise à la citrouille, sans dépasser la ligne.",
+  "icon": "icon.png",
+  "entry": "index.js",
+  "view": "compote",
+  "neobase": ">=4.0.0",
+  "type": "app",
+  "category": "Jeux",
+  "mobile": false,
+  "system": false,
+  "dependencies": {},
+  "sdk": "2.1.0",
+  "permissions": [
+    "storage"
+  ]
+}

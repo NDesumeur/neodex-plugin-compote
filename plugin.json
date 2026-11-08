@@ -3,7 +3,7 @@
   "name": "Compote",
   "version": "1.0.2",
   "author": "NDesumeur",
-  "description": "Lâche des fruits dans la caisse : deux fruits pareils qui se touchent fusionnent en un plus gros. De la cerise à la citrouille, sans dépasser la ligne.",
+  "description": "Jeu de fusion de fruits : vise à la souris et lâche des fruits dans la caisse ; deux fruits pareils qui se touchent fusionnent en un plus gros, parfois en cascade. Onze fruits de la cerise à la citrouille, des fruits qui roulent et se poussent, et deux citrouilles qui disparaissent avec un gros bonus. La partie s'arrête quand un fruit reste au-dessus de la ligne rouge.",
   "icon": "icon.png",
   "entry": "index.js",
   "view": "compote",

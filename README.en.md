@@ -9,12 +9,16 @@ A fruit-merging game: drop fruit into a crate, and when two identical fruits tou
 - **Mouse** or **← →**: aim; a line shows where the fruit will fall.
 - **Click**, **Space** or **↓**: drop the fruit.
 - The next fruit is shown at the top right.
+- **P**: pause. **Gamepad**: d-pad or left stick to aim, **A** to drop, **Start** to pause.
+- **FULLSCREEN**: the crate fills the screen; otherwise it fits the window size.
 
 ## Rules
 
 - Fruits fall, roll and push each other like real objects: big ones shove small ones aside.
 - Two **identical** fruits that touch merge into the next fruit up, halfway between them. A merge can trigger others in a cascade.
 - Only the five smallest fruits are dropped (cherry, strawberry, grape, tangerine, apple); bigger ones only come from merging.
+- When merging, the two fruits slide into each other, the new one is born swelling up then settles, and juice splashes.
+- **Special fruits** (after the first 15 drops, about one in eight): a **frozen** fruit in its ice cube does not merge until it has melted (about twelve seconds) or a merge has happened right next to it; a **rotten** fruit never merges, it rots away after about twenty seconds, or gets squashed (5 points) when a merge happens against it.
 - **Two pumpkins** that touch disappear and earn a big bonus.
 - The game ends when a fruit stays still above the red line for about two seconds: the line flashes as a warning.
 

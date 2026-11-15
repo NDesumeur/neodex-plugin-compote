@@ -1,22 +1,26 @@
 // Compote : Lâche des fruits dans la caisse : deux fruits pareils qui se touchent fusionnent en un plus gros. De la cerise à la citrouille, sans dépasser la ligne.
 // Jeu NeoDex en pixel art dessiné à la main (police bitmap, cadres et boutons en pixels). Il tourne dans le bac à sable de NeoDex.
 const HTML = `<div class="appWrap wide">
-  <div class="agHead"><span class="label">Compote</span><span class="hint">Souris ou ← → : viser · clic, espace ou ↓ : lâcher</span></div>
+  <div class="agHead"><span class="label">Compote</span><span class="hint">Souris ou ← → : viser · clic, espace ou ↓ : lâcher · P : pause</span></div>
   <div class="gMain"><div class="gameBox"><canvas id="coCanvas" width="216" height="288"></canvas></div>
     <div class="gSide">
       <div class="sysCard"><b>RECORDS</b><div class="gStats" id="coStats"></div></div>
       <div class="sysCard"><b>LES FRUITS</b><canvas id="coChain" width="232" height="48"></canvas></div>
-      <div class="row"><button class="btn main" id="coNew">NOUVELLE PARTIE</button></div>
+      <div class="row"><button class="btn main" id="coNew">NOUVELLE PARTIE</button><button class="btn" id="coFs">PLEIN ÉCRAN</button></div>
+      <div class="hint">Manette : croix ou stick pour viser, A pour lâcher, Start pour la pause.</div>
+      <div class="hint">De temps en temps arrive un fruit gelé (il ne fusionne qu'une fois dégelé : attends, ou fais une fusion juste à côté) ou un fruit gâté (il ne fusionne jamais ; il pourrit et disparaît, ou s'écrase quand une fusion se fait contre lui).</div>
     </div></div>
 </div>`;
 const CSS = `.gMain{display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap}
-.gameBox{display:grid;place-items:center;padding:10px;background:#05010b;flex:2;min-width:320px;position:relative}
+.gameBox{display:grid;place-items:center;padding:10px;background:#05010b;flex:2 1 420px;min-width:min(100%,340px);position:relative}
 .gameBox canvas{width:100%;image-rendering:pixelated;cursor:var(--cp,pointer);touch-action:none}
 .gSide{display:flex;flex-direction:column;gap:14px;flex:1;min-width:250px;max-width:420px}
 .gSide .sysCard{display:flex;flex-direction:column}
 .gStats{display:grid;grid-template-columns:1fr auto;gap:4px 14px}
 .gStats b{text-align:right}
-.gameBox canvas{max-width:460px;aspect-ratio:216/288}
+.gameBox canvas{width:min(100%,max(300px,calc((100vh - 200px) * 216 / 288)));height:auto;aspect-ratio:216/288}
+.gameBox:fullscreen{padding:0}
+.gameBox:fullscreen canvas{width:min(100vw,calc(100vh * 216 / 288))}
 #coChain{width:100%;image-rendering:pixelated;margin-top:8px}`;
 /* ---------- l'habillage pixel art, dessiné à la main : police bitmap (accents compris), cadres, boutons, icônes ----------
    Tout est en pixels pleins, agrandis par 2 sans lissage : aucun dégradé, aucune ombre floue. */
@@ -328,14 +332,15 @@ const clock = s => Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStar
 /* ---------- Compote : physique de disques (gravité, chocs, sous-pas), fusion des paires identiques ---------- */
 const CO = {W: 216, H: 288, L: 14, R: 202, FLOOR: 276, LINE: 62, DROPY: 38};
 // nom, rayon, couleur, ombre, reflet, détail
-const FRUITS = [['cerise', 6, '#e8283c', '#9a0e22', '#ff9aa8', 'stem'], ['fraise', 8, '#ff4a5a', '#c02a3a', '#ffb0b8', 'seeds'], ['raisin', 10, '#9a5ae0', '#6a2aa8', '#d0b0ff', 'grape'],
-  ['mandarine', 12, '#ffa030', '#d06a10', '#ffd8a0', 'dots'], ['pomme', 15, '#e83a3a', '#a81a2a', '#ffb0a8', 'leaf'], ['poire', 18, '#c8d840', '#8aa020', '#f0f8a8', 'leaf'],
-  ['pêche', 21, '#ffb08a', '#e0785a', '#ffe0d0', 'cleft'], ['ananas', 24, '#ffd84a', '#c8a020', '#fff4a8', 'pine'], ['melon', 28, '#c8e86a', '#88b040', '#f0ffc0', 'net'],
-  ['pastèque', 33, '#3aa84a', '#1a6a2a', '#8ae07a', 'stripes'], ['citrouille', 38, '#ff8a2a', '#c85a10', '#ffc890', 'ribs']];
+const FRUITS = [['cerise', 7, '#e8283c', '#9a0e22', '#ff9aa8', 'stem'], ['fraise', 9, '#ff4a5a', '#c02a3a', '#ffb0b8', 'seeds'], ['raisin', 12, '#9a5ae0', '#6a2aa8', '#d0b0ff', 'grape'],
+  ['mandarine', 14, '#ffa030', '#d06a10', '#ffd8a0', 'dots'], ['pomme', 17, '#e83a3a', '#a81a2a', '#ffb0a8', 'leaf'], ['poire', 20, '#c8d840', '#8aa020', '#f0f8a8', 'leaf'],
+  ['pêche', 23, '#ffb08a', '#e0785a', '#ffe0d0', 'cleft'], ['ananas', 26, '#ffd84a', '#c8a020', '#fff4a8', 'pine'], ['melon', 30, '#c8e86a', '#88b040', '#f0ffc0', 'net'],
+  ['pastèque', 35, '#3aa84a', '#1a6a2a', '#8ae07a', 'stripes'], ['citrouille', 40, '#ff8a2a', '#c85a10', '#ffc890', 'ribs']];
 const cos = gstore('compote', {games: 0, top: 0});
 let co = null;
-function coSprite(l) {  // chaque fruit dessiné pixel par pixel : contour, ombre en bas à droite, reflet, détail, petit visage
-  const [, r, c, d, h, kind] = FRUITS[l], S = r * 2 + 2, cv = el('canvas'); cv.width = cv.height = S + 8; const g = cv.getContext('2d'), o = 4 + r + 1;
+function coSprite(l, rot) {  // chaque fruit dessiné pixel par pixel : contour, ombre en bas à droite, reflet, détail, petit visage (rot : la version gâtée, brune et moisie)
+  let [, r, c, d, h, kind] = FRUITS[l]; if (rot) { c = '#8a7440'; d = '#5a4620'; h = '#b0a070'; }
+  const S = r * 2 + 2, cv = el('canvas'); cv.width = cv.height = S + 8; const g = cv.getContext('2d'), o = 4 + r + 1;
   const inside = (x, y, rr) => (x - o + .5) ** 2 + (y - o + .5) ** 2 <= rr * rr;
   for (let y = 0; y < cv.height; y++) for (let x = 0; x < cv.width; x++) {
     if (!inside(x, y, r + 1)) continue;
@@ -356,17 +361,35 @@ function coSprite(l) {  // chaque fruit dessiné pixel par pixel : contour, ombr
   if (kind === 'seeds') { px(g, '#2f8a3a', o - 3, top, 7, 2); px(g, '#4fb85a', o - 2, top - 1, 5, 1); }
   if (kind === 'leaf' || kind === 'ribs') { px(g, '#5a3010', o, top - 2, 2, 3); px(g, '#2f8a3a', o + 2, top - 2, 4, 2); px(g, '#4fb85a', o + 3, top - 3, 3, 1); }
   if (kind === 'pine') for (let i = -2; i <= 2; i++) { px(g, '#2f8a3a', o + i * 2, top - 3 + Math.abs(i), 1, 4 - Math.abs(i)); px(g, '#4fb85a', o + i * 2 + 1, top - 2 + Math.abs(i), 1, 3 - Math.abs(i)); }
-  // visage : deux yeux et une bouche, à la taille du fruit
-  const e = Math.max(1, Math.round(r / 9)), ex = Math.round(r * .32), ey = o + Math.round(r * .05);
-  px(g, '#2a0a10', o - ex - e, ey, e, e * 2); px(g, '#2a0a10', o + ex, ey, e, e * 2); px(g, '#2a0a10', o - e, ey + e * 3, e * 2, e);
-  if (r >= 10) { px(g, '#ff8aa0', o - ex - e * 3, ey + e * 2, e * 2, e); px(g, '#ff8aa0', o + ex + e, ey + e * 2, e * 2, e); }
+  if (rot) for (let i = 0; i < 6 + r / 3; i++) { const a = i * 2.1, rr = r * (.3 + (i % 4) * .17); px(g, i % 2 ? '#7aa83a' : '#a8c86a', Math.round(o + Math.cos(a) * rr), Math.round(o + Math.sin(a) * rr), 2, 1 + (i % 2)); }  // les taches de moisi
+  // visage : yeux (avec un reflet dès que le fruit est assez gros), bouche souriante, joues roses ; gâté : yeux en croix, bouche de travers
+  const e = Math.max(1, Math.round(r / 9)), ex = Math.round(r * .32), ey = o + Math.round(r * .05), k = '#2a0a10';
+  if (rot) { for (const cx of [o - ex - e, o + ex]) for (let i = 0; i < 3; i++) { px(g, k, cx - 1 + i, ey - 1 + i); px(g, k, cx + 1 - i, ey - 1 + i); }
+    px(g, k, o - e * 2, ey + e * 3 + 1, e, e); px(g, k, o - e, ey + e * 3, e * 2, e); px(g, k, o + e, ey + e * 3 + 1, e, e); return cv; }
+  if (r >= 9) {
+    for (const cx of [o - ex - e, o + ex]) { px(g, k, cx, ey - e, e + 1, e * 2 + 1); px(g, '#ffffff', cx, ey - e, 1, 1); }
+    px(g, k, o - e * 2, ey + e * 2 + 1, e, e); px(g, k, o - e, ey + e * 3, e * 2, e); px(g, k, o + e, ey + e * 2 + 1, e, e);  // le sourire
+    px(g, '#ff8aa0', o - ex - e * 3, ey + e * 2, e * 2, e); px(g, '#ff8aa0', o + ex + e * 2, ey + e * 2, e * 2, e);
+  } else { px(g, k, o - ex - e, ey, e, e * 2); px(g, k, o + ex, ey, e, e * 2); px(g, k, o - e, ey + e * 3, e * 2, e); }
   return cv;
 }
 const CO_SPR = FRUITS.map((f, i) => coSprite(i));
+// les fruits spéciaux (seulement les petits, ceux qu'on lâche) : gelé dans un glaçon, ou gâté
+const CO_ROT = FRUITS.slice(0, 5).map((f, i) => coSprite(i, true));
+const CO_ICE = FRUITS.slice(0, 5).map((f, i) => { const b = CO_SPR[i], c = el('canvas'); c.width = b.width; c.height = b.height; const g = c.getContext('2d'), r = f[1], o = 4 + r + 1;
+  g.drawImage(b, 0, 0); g.globalCompositeOperation = 'source-atop'; g.globalAlpha = .45; px(g, '#a8e8ff', 0, 0, c.width, c.height); g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1;
+  const a = r + 2;  // le glaçon : un carré aux coins arrondis, arête claire en haut à gauche
+  px(g, '#e8faff', o - a, o - a + 1, 1, a * 2 - 2); px(g, '#e8faff', o - a + 1, o - a, a * 2 - 2, 1); px(g, '#6ab8e8', o + a - 1, o - a + 1, 1, a * 2 - 2); px(g, '#6ab8e8', o - a + 1, o + a - 1, a * 2 - 2, 1);
+  px(g, '#ffffff', o - a + 2, o - a + 2, 3, 1); px(g, '#ffffff', o - a + 2, o - a + 3, 1, 2); return c; });
+const coImg = f => f.ice ? CO_ICE[f.l] : f.rot ? CO_ROT[f.l] : CO_SPR[f.l];
 function coNew() {
-  co = Object.assign(co || {tick: 0, raf: 0}, {seen: co ? co.tick : 0, mode: 'ready', fruits: [], aim: CO.W / 2, cur: coPick(), next: coPick(), cool: 0, score: 0, danger: 0, pops: [], top: 0, record: false, dead: 0});
+  co = Object.assign(co || {tick: 0, raf: 0}, {seen: co ? co.tick : 0, mode: 'ready', fruits: [], aim: CO.W / 2, cur: {l: Math.floor(Math.random() * 5)}, next: {l: Math.floor(Math.random() * 5)}, cool: 0, score: 0, danger: 0, pops: [], top: 0, record: false, dead: 0, drops: 0, merges: [], juice: []});
 }
-function coPick() { return Math.floor(Math.random() * 5); }
+function coPick() {  // le prochain fruit : après 15 lâchers, environ un sur huit est gelé ou gâté
+  const l = Math.floor(Math.random() * 5); if (!co || co.drops < 15 || Math.random() > .125) return {l};
+  return Math.random() < .5 ? {l, ice: 720} : {l, rot: 1200};
+}
+const coSpecImg = p => p.ice ? CO_ICE[p.l] : p.rot ? CO_ROT[p.l] : CO_SPR[p.l];
 let coac = null;
 function coBeep(f, d, type = 'triangle', slide = 0) { try { coac ??= new AudioContext(); const o = coac.createOscillator(), g = coac.createGain(), t = coac.currentTime; o.type = type; o.frequency.setValueAtTime(f, t); if (slide) o.frequency.exponentialRampToValueAtTime(slide, t + d); g.gain.setValueAtTime(.06, t); g.gain.exponentialRampToValueAtTime(.0001, t + d); o.connect(g).connect(coac.destination); o.start(t); o.stop(t + d + .02); } catch {} }
 function coDrop() {
@@ -374,8 +397,8 @@ function coDrop() {
   if (co.mode === 'pause') { co.mode = 'play'; return; }
   if (co.mode === 'over') { if (co.dead > 40) coNew(); return; }
   if (co.cool) return;
-  const r = FRUITS[co.cur][1]; co.fruits.push({x: Math.max(CO.L + r, Math.min(CO.R - r, co.aim)), y: CO.DROPY, vx: 0, vy: 0, l: co.cur, r, age: 0});
-  co.cur = co.next; co.next = coPick(); co.cool = 32; coBeep(300, .08);
+  const p = co.cur, r = FRUITS[p.l][1]; co.fruits.push({x: Math.max(CO.L + r, Math.min(CO.R - r, co.aim)), y: CO.DROPY, vx: 0, vy: 0, l: p.l, r, age: 0, ice: p.ice || 0, rot: p.rot || 0});
+  co.drops++; co.cur = co.next; co.next = coPick(); co.cool = 32; coBeep(p.ice ? 1200 : p.rot ? 160 : 300, .08);
 }
 function coStep() {  // un sous-pas de physique
   const F = co.fruits;
@@ -385,18 +408,22 @@ function coStep() {  // un sous-pas de physique
   for (let it = 0; it < 3; it++) for (let i = 0; i < F.length; i++) for (let j = i + 1; j < F.length; j++) {
     const a = F[i], b = F[j]; if (a.gone || b.gone) continue;
     const dx = b.x - a.x, dy = b.y - a.y, rr = a.r + b.r, d2 = dx * dx + dy * dy; if (d2 >= rr * rr) continue;
-    if (a.l === b.l) { coMerge(a, b); continue; }
+    if (a.l === b.l && !a.ice && !b.ice && !a.rot && !b.rot) { coMerge(a, b); continue; }
     const d = Math.sqrt(d2) || .01, nx = dx / d, ny = dy / d, over = rr - d, ma = a.r * a.r, mb = b.r * b.r, ka = mb / (ma + mb), kb = ma / (ma + mb);
     a.x -= nx * over * ka; a.y -= ny * over * ka; b.x += nx * over * kb; b.y += ny * over * kb;
     const rv = (b.vx - a.vx) * nx + (b.vy - a.vy) * ny; if (rv < 0) { const imp = -1.15 * rv; a.vx -= nx * imp * ka; a.vy -= ny * imp * ka; b.vx += nx * imp * kb; b.vy += ny * imp * kb; }
   }
-  if (F.some(f => f.gone)) co.fruits = F.filter(f => !f.gone);
+  if (co.fruits.some(f => f.gone)) co.fruits = co.fruits.filter(f => !f.gone);
 }
 function coMerge(a, b) {
   a.gone = b.gone = true; const x = (a.x + b.x) / 2, y = (a.y + b.y) / 2, l = a.l + 1;
   co.score += (l + 1) * (l + 2) / 2; co.pops.push({x, y, r: a.r, t: 0, l: Math.min(l, 10)});
+  co.merges.push({a: {x: a.x, y: a.y, l: a.l, r: a.r}, b: {x: b.x, y: b.y, l: b.l, r: b.r}, x, y, t: 0});  // les deux fruits glissent l'un vers l'autre
+  for (let i = 0; i < 10 + a.r / 2; i++) { const an = Math.random() * Math.PI * 2, v = .8 + Math.random() * 1.8; co.juice.push({x, y, vx: Math.cos(an) * v, vy: Math.sin(an) * v - 1.2, t: 0, c: FRUITS[a.l][2 + (i % 3 === 0 ? 2 : 0)]}); }  // le jus qui gicle
+  for (const f of co.fruits) if (!f.gone && (f.ice || f.rot) && Math.hypot(f.x - x, f.y - y) < f.r + a.r * 2 + 6) {  // la fusion dégèle ou écrase ses voisins spéciaux
+    if (f.ice) { f.ice = 0; coBeep(1600, .12, 'square', 800); } else { f.gone = true; co.score += 5; co.pops.push({x: f.x, y: f.y, r: f.r, t: 0, l: 0}); coBeep(120, .2, 'sawtooth', 60); } }
   if (l >= FRUITS.length) { co.score += 100; coBeep(523, .5, 'square', 1046); return; }  // deux citrouilles : elles disparaissent
-  const r = FRUITS[l][1]; co.fruits.push({x, y, vx: (a.vx + b.vx) / 2, vy: (a.vy + b.vy) / 2 - .6, l, r, age: 60});
+  const r = FRUITS[l][1]; co.fruits.push({x, y, vx: (a.vx + b.vx) / 2, vy: (a.vy + b.vy) / 2 - .6, l, r, age: 60, born: co.tick});
   co.top = Math.max(co.top, l); coBeep(260 * 1.12 ** l, .14, 'triangle', 390 * 1.12 ** l);
 }
 function coUpdate() {
@@ -404,9 +431,13 @@ function coUpdate() {
   if (co.mode !== 'play') return;
   if (co.cool) co.cool--;
   if (coKeys.L) co.aim -= 2.2; if (coKeys.R) co.aim += 2.2;
-  const r = FRUITS[co.cur][1]; co.aim = Math.max(CO.L + r, Math.min(CO.R - r, co.aim));
+  if (coKeys.ax) co.aim += coKeys.ax * 2.6;
+  const r = FRUITS[co.cur.l][1]; co.aim = Math.max(CO.L + r, Math.min(CO.R - r, co.aim));
   for (let s = 0; s < 3; s++) coStep();
-  for (const f of co.fruits) f.age++;
+  for (const f of co.fruits) { f.age++; if (f.ice && !--f.ice) coBeep(1400, .1, 'square', 700); if (f.rot && !--f.rot) { f.gone = true; co.pops.push({x: f.x, y: f.y, r: f.r, t: 0, l: 0}); } }  // le glaçon fond, le fruit gâté pourrit
+  if (co.fruits.some(f => f.gone)) co.fruits = co.fruits.filter(f => !f.gone);
+  for (const m of co.merges) m.t++; co.merges = co.merges.filter(m => m.t < 6);
+  for (const j of co.juice) { j.x += j.vx; j.y += j.vy; j.vy += .12; j.t++; } co.juice = co.juice.filter(j => j.t < 26 && j.y < CO.FLOOR);
   for (const p of co.pops) p.t++; co.pops = co.pops.filter(p => p.t < 14);
   const high = co.fruits.some(f => f.age > 70 && f.y - f.r < CO.LINE && Math.abs(f.vy) < .6);
   co.danger = high ? co.danger + 1 : Math.max(0, co.danger - 2);
@@ -415,9 +446,8 @@ function coUpdate() {
 function coDraw() {
   const g = co.g, {W, H, L, R, FLOOR, LINE} = CO;
   for (; co.seen < co.tick; co.seen++) if (co.mode !== 'play') coUpdate();
-  // le mur du fond : papier peint à motifs, puis la caisse en bois
-  px(g, '#3a1424', 0, 0, W, H);
-  for (let y = 0; y < H; y += 12) for (let x = (y / 12 % 2) * 6; x < W; x += 12) { px(g, '#4a1c30', x + 2, y + 4, 2, 2); px(g, '#4a1c30', x + 4, y + 2, 2, 2); }
+  // la cuisine : la crédence en carreaux de faïence, l'étagère et ses bocaux de compote, le plan de travail ; puis la caisse en bois
+  g.drawImage(CO_KITCHEN, 0, 0);
   px(g, '#5a3010', L - 6, LINE - 18, 6, FLOOR - LINE + 30); px(g, '#5a3010', R, LINE - 18, 6, FLOOR - LINE + 30); px(g, '#8a5420', L - 5, LINE - 18, 2, FLOOR - LINE + 30); px(g, '#8a5420', R + 1, LINE - 18, 2, FLOOR - LINE + 30);
   px(g, '#2a1408', L, LINE - 18, R - L, FLOOR - LINE + 18); px(g, '#341a0c', L, LINE - 18, R - L, 2);
   for (let y = LINE; y < FLOOR; y += 24) px(g, '#2f170a', L, y, R - L, 1);
@@ -427,17 +457,27 @@ function coDraw() {
   for (let x = L; x < R; x += 6) px(g, warn ? '#ff4a5a' : '#8a3450', x, LINE, 3, 1);
   // la visée et le fruit à lâcher
   if (co.mode === 'play' || co.mode === 'ready') {
-    const r = FRUITS[co.cur][1], x = Math.round(co.aim);
+    const r = FRUITS[co.cur.l][1], x = Math.round(co.aim);
     for (let y = CO.DROPY + r + 4; y < FLOOR; y += 6) px(g, '#ffffff22', x, y, 1, 3);
-    if (!co.cool) g.drawImage(CO_SPR[co.cur], x - r - 5, CO.DROPY - r - 5);
+    if (!co.cool) g.drawImage(coSpecImg(co.cur), x - r - 5, CO.DROPY - r - 5);
   }
-  for (const f of co.fruits) g.drawImage(CO_SPR[f.l], Math.round(f.x - f.r - 5), Math.round(f.y - f.r - 5));
+  for (const m of co.merges) { const k = m.t / 6; g.globalAlpha = 1 - k * .6; for (const o of [m.a, m.b]) g.drawImage(CO_SPR[o.l], Math.round(o.x + (m.x - o.x) * k - o.r - 5), Math.round(o.y + (m.y - o.y) * k - o.r - 5)); g.globalAlpha = 1; }
+  for (const f of co.fruits) {
+    const t = f.born != null ? co.tick - f.born - 4 : 99, img = coImg(f);
+    if (t < 0) continue;  // le nouveau fruit attend que les deux autres se rejoignent
+    if (t < 14) { const s = t < 5 ? .55 + t * .13 : 1.2 - (t - 5) * .022, sx = s * (t < 8 ? 1.06 : 1), sy = s / (t < 8 ? 1.06 : 1);  // il naît petit, gonfle trop, puis se pose
+      g.drawImage(img, Math.round(f.x - (f.r + 5) * sx), Math.round(f.y - (f.r + 5) * sy), Math.round(img.width * sx), Math.round(img.height * sy)); }
+    else g.drawImage(img, Math.round(f.x - f.r - 5), Math.round(f.y - f.r - 5));
+    if (f.rot && (co.tick >> 3) % 2) for (let i = 0; i < 2; i++) px(g, '#1a1a10', f.x + Math.sin(co.tick / 9 + i * 3) * (f.r + 3), f.y - f.r - 3 + Math.cos(co.tick / 7 + i) * 3, 1, 1);  // les mouches
+    if (f.ice && f.ice < 120 && (co.tick >> 2) % 2) px(g, '#a8e8ff', f.x - 1, f.y + f.r, 2, 2);  // le glaçon goutte avant de fondre
+  }
+  for (const j of co.juice) px(g, j.c, j.x, j.y, j.t < 12 ? 2 : 1, j.t < 12 ? 2 : 1);
   for (const p of co.pops) { const rr = p.r + p.t * 1.5; g.strokeStyle = p.t % 4 < 2 ? '#ffffff' : FRUITS[Math.min(p.l, 10)][2]; g.lineWidth = 2; g.beginPath(); g.arc(Math.round(p.x), Math.round(p.y), rr, 0, 7); g.stroke(); }
   // score et fruit suivant
   pxFont(g, String(co.score), 6, 14, '#ffffff', 12);
-  PXK.fill(g, 'SUIVANT', W - 34, 8, '#e0a8b4', PXK.scale(8), 'center'); const nr = FRUITS[co.next][1], sc = Math.min(1, 12 / nr);
-  g.drawImage(CO_SPR[co.next], W - 34 - (nr + 5) * sc, 26 - (nr + 5) * sc, (nr * 2 + 10) * sc, (nr * 2 + 10) * sc);
-  if (co.mode === 'ready') gameText(g, W, [['COMPOTE', '#ff4a5a', 16], ['Clic pour lâcher un fruit', '#ffffff'], ['Deux pareils = un plus gros', '#e0a8b4'], ['Record ' + (games.best.compote || 0), '#ffd84a']], 130);
+  PXK.fill(g, 'SUIVANT', W - 34, 8, '#e0a8b4', PXK.scale(8), 'center'); const nr = FRUITS[co.next.l][1], sc = Math.min(1, 12 / nr);
+  g.drawImage(coSpecImg(co.next), W - 34 - (nr + 5) * sc, 26 - (nr + 5) * sc, (nr * 2 + 10) * sc, (nr * 2 + 10) * sc);
+  if (co.mode === 'ready') gameText(g, W, [['COMPOTE', '#ff4a5a', 16], ['Clic pour lâcher un fruit', '#ffffff'], ['Deux pareils = un plus gros', '#e0a8b4'], ['Gelé ou gâté : pas de fusion', '#a8e8ff'], ['Record ' + (games.best.compote || 0), '#ffd84a']], 130);
   if (co.mode === 'pause') gameText(g, W, [['PAUSE', '#ffffff', 12], ['Clic pour reprendre', '#e0a8b4']], 140);
   if (co.mode === 'over' && co.dead > 15) gameText(g, W, [['DÉBORDÉ !', '#ff4a5a', 14], ['Score ' + co.score, '#ffffff'], ['Plus gros fruit : ' + FRUITS[co.top][0], '#ffd84a'], [co.record ? 'NOUVEAU RECORD !' : 'Record ' + (games.best.compote || 0), '#7ee07a'], [co.dead > 40 ? 'Clic pour rejouer' : '', '#e0a8b4']], 120);
 }
@@ -447,6 +487,20 @@ function coInfo() {
   const ws = FRUITS.map(([, r]) => (r * 2 + 10) * Math.min(1, 9 / r)), k = Math.min(1, (c.width - 4 - FRUITS.length) / ws.reduce((a, b) => a + b));  // les 11 fruits tiennent dans la largeur
   FRUITS.forEach((f, i) => { const w = ws[i] * k; g.globalAlpha = i <= cos.top + 1 ? 1 : .3; g.drawImage(CO_SPR[i], x, 24 - w / 2, w, w); x += w + 1; }); g.globalAlpha = 1;
 }
+const cnv = (w, h, fn) => { const c = el('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); g.imageSmoothingEnabled = false; fn(g); return c; };
+// la cuisine, dessinée une fois : faïence blanche et bleue, une étagère avec trois bocaux de compote, le plan de travail
+const CO_KITCHEN = cnv(CO.W, CO.H, b => {
+  px(b, '#c8c0b8', 0, 0, CO.W, CO.H);
+  for (let y = 0; y < CO.H; y += 12) for (let x = 0; x < CO.W; x += 12) { const blue = ((x + y) / 12) % 2; px(b, blue ? '#5a8ac8' : '#f0ece4', x + 1, y + 1, 11, 11); px(b, blue ? '#8ab0e0' : '#ffffff', x + 1, y + 1, 11, 1);
+    if (blue) { px(b, '#3a6aa8', x + 5, y + 4, 3, 5); px(b, '#3a6aa8', x + 4, y + 5, 5, 3); } }  // une petite fleur au milieu des carreaux bleus
+  b.globalAlpha = .35; px(b, '#3a1424', 0, 0, CO.W, CO.H); b.globalAlpha = 1;  // la pièce dans la pénombre : la caisse reste ce qu'on regarde
+  px(b, '#2a1408', 56, 33, 104, 4); px(b, '#8a5420', 56, 31, 104, 3); px(b, '#b07038', 56, 31, 104, 1);  // l'étagère
+  [[66, '#e8283c'], [96, '#ffa030'], [128, '#9a5ae0']].forEach(([x, c]) => {  // les bocaux : verre, compote, couvercle à carreaux, étiquette
+    px(b, '#2a1408', x - 1, 13, 20, 18); px(b, '#d8e8f0', x, 14, 18, 17); px(b, c, x + 1, 19, 16, 11); px(b, '#ffffff', x + 2, 16, 1, 12);
+    px(b, '#2a1408', x - 2, 10, 22, 5); for (let i = 0; i < 20; i += 2) { px(b, i % 4 ? '#ffffff' : '#e83a4a', x - 1 + i, 11, 2, 2); px(b, i % 4 ? '#e83a4a' : '#ffffff', x - 1 + i, 13, 2, 1); }
+    px(b, '#f8f0d8', x + 4, 22, 10, 5); px(b, '#8a5420', x + 6, 24, 6, 1); });
+  px(b, '#2a1408', 0, CO.FLOOR + 2, CO.W, 1);
+});
 const coKeys = {};
 const cv = $('coCanvas');
 const coX = e => { const b = cv.getBoundingClientRect(); return (e.clientX - b.left) / b.width * CO.W; };
@@ -460,14 +514,36 @@ document.addEventListener('keydown', e => {
 });
 document.addEventListener('keyup', e => { if (e.key === 'ArrowLeft') coKeys.L = false; if (e.key === 'ArrowRight') coKeys.R = false; });
 $('coNew').onclick = () => { coNew(); $('coNew').blur(); };
-{  // vérification : deux cerises qui se touchent donnent une fraise ; deux fruits différents ne fusionnent pas et finissent posés sans se chevaucher
-  const keep = co; co = null; coNew(); co.mode = 'play';
-  co.fruits = [{x: 100, y: 200, vx: 0, vy: 0, l: 0, r: 6, age: 0}, {x: 108, y: 200, vx: 0, vy: 0, l: 0, r: 6, age: 0}]; coStep(); const merged = co.fruits.length === 1 && co.fruits[0].l === 1;
-  co.fruits = [{x: 100, y: 200, vx: 0, vy: 0, l: 2, r: 10, age: 0}, {x: 104, y: 180, vx: 0, vy: 0, l: 4, r: 15, age: 0}]; for (let i = 0; i < 600; i++) coStep();
-  const [a, b] = co.fruits, apart = Math.hypot(a.x - b.x, a.y - b.y) >= a.r + b.r - 1.5, rest = co.fruits.every(f => f.y + f.r <= CO.FLOOR + .01);
-  console.assert(merged && apart && rest, 'compote', {merged, apart, rest});
-  co = keep;
+$('coFs').onclick = () => { $('coFs').blur(); try { if (document.fullscreenElement) document.exitFullscreen(); else cv.parentElement.requestFullscreen?.().catch(() => {}); } catch {} };
+{  // la manette : croix ou stick gauche pour viser, A (ou B) pour lâcher, Start pour la pause
+  let prev = [];
+  const loop = () => {
+    requestAnimationFrame(loop);
+    const p = [...(navigator.getGamepads?.() || [])].find(Boolean);
+    if (!p || !co || !view.classList.contains('on')) { prev = []; coKeys.ax = 0; return; }
+    const now = p.buttons.map(b => b.pressed), was = prev, hit = i => now[i] && !was[i]; prev = now;
+    const ax = p.axes[0] || 0; coKeys.ax = (now[15] ? 1 : 0) - (now[14] ? 1 : 0) || (Math.abs(ax) > .25 ? ax : 0);
+    if (hit(0) || hit(1)) coDrop();
+    if (hit(9)) { if (co.mode === 'play') co.mode = 'pause'; else coDrop(); }
+  };
+  requestAnimationFrame(loop);
 }
+function coCheck() {  // vérification : deux cerises qui se touchent donnent une fraise ; deux fruits différents ne fusionnent pas et finissent posés sans se chevaucher ; gelés et gâtés
+  const keep = co; co = null; coNew(); co.mode = 'play';
+  const R = l => FRUITS[l][1];
+  co.fruits = [{x: 100, y: 200, vx: 0, vy: 0, l: 0, r: R(0), age: 0}, {x: 110, y: 200, vx: 0, vy: 0, l: 0, r: R(0), age: 0}]; coStep(); const merged = co.fruits.length === 1 && co.fruits[0].l === 1;
+  co.fruits = [{x: 100, y: 200, vx: 0, vy: 0, l: 2, r: R(2), age: 0}, {x: 104, y: 180, vx: 0, vy: 0, l: 4, r: R(4), age: 0}]; for (let i = 0; i < 600; i++) coStep();
+  const [a, b] = co.fruits, apart = Math.hypot(a.x - b.x, a.y - b.y) >= a.r + b.r - 1.5, rest = co.fruits.every(f => f.y + f.r <= CO.FLOOR + .01);
+  // un gelé ne fusionne pas ; une fusion à côté le dégèle et écrase un gâté
+  co.fruits = [{x: 60, y: 260, vx: 0, vy: 0, l: 0, r: R(0), age: 0, ice: 500}, {x: 70, y: 260, vx: 0, vy: 0, l: 0, r: R(0), age: 0}]; coStep(); const iceHolds = co.fruits.length === 2;
+  co.fruits.push({x: 90, y: 262, vx: 0, vy: 0, l: 1, r: R(1), age: 0, rot: 900}, {x: 70, y: 240, vx: 0, vy: 0, l: 3, r: R(3), age: 0}, {x: 70, y: 220, vx: 0, vy: 0, l: 3, r: R(3), age: 0});
+  coMerge(co.fruits[3], co.fruits[4]); coStep(); const thaw = co.fruits.filter(f => f.l === 0).every(f => !f.ice) && !co.fruits.some(f => f.rot);
+  const bad = Object.entries({merged, apart, rest, iceHolds, thaw}).filter(([, v]) => !v).map(([k]) => k);
+  co = keep;
+  return bad.length ? bad.join(', ') : 'ok';
+}
+console.assert(coCheck() === 'ok', 'compote', coCheck());
+cv.__co = {st: () => co, check: coCheck, FRUITS, CO};
 ctx.onOpen(() => {
   if (!co || !co.g) { coNew(); co.g = cv.getContext('2d'); }
   gameLoop(co, 'compote', coUpdate, coDraw); coInfo();

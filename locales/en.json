@@ -58,7 +58,6 @@
  "Plus gros fruit :": "Largest fruit:",
  "RECORDS": "RECORDS",
  "Record": "Record",
- "Record, niveau.": "Record, level.",
  "SUIVANT": "FOLLOWING",
  "Score": "Score",
  "Ua": "Ua",
@@ -72,5 +71,6 @@
  "PLEIN ÉCRAN": "FULLSCREEN",
  "Manette : croix ou stick pour viser, A pour lâcher, Start pour la pause.": "Gamepad: d-pad or stick to aim, A to drop, Start to pause.",
  "De temps en temps arrive un fruit gelé (il ne fusionne qu'une fois dégelé : attends, ou fais une fusion juste à côté) ou un fruit gâté (il ne fusionne jamais ; il pourrit et disparaît, ou s'écrase quand une fusion se fait contre lui).": "Now and then a frozen fruit arrives (it only merges once thawed: wait, or make a merge right next to it) or a rotten fruit (it never merges; it rots away, or gets squashed when a merge happens against it).",
- "Gelé ou gâté : pas de fusion": "Frozen or rotten: no merge"
+ "Gelé ou gâté : pas de fusion": "Frozen or rotten: no merge",
+ "Rien n'est synchronisé : tes records restent sur cet appareil.": "Nothing is synced: your records stay on this device."
 }

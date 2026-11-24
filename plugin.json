@@ -1,9 +1,9 @@
 {
   "id": "neodex.compote",
   "name": "Compote",
-  "version": "1.1.2",
+  "version": "1.2.0",
   "author": "NDesumeur",
-  "description": "Jeu de fusion de fruits : vise à la souris et lâche des fruits dans la caisse ; deux fruits pareils qui se touchent fusionnent en un plus gros, parfois en cascade. Onze fruits de la cerise à la citrouille, des fruits qui roulent et se poussent, et deux citrouilles qui disparaissent avec un gros bonus. La partie s'arrête quand un fruit reste au-dessus de la ligne rouge. Fruits plus gros et souriants, fusion animée, cuisine autour de la caisse, fruits gelés ou gâtés de temps en temps, manette, plein écran, s'adapte à la taille de l'écran.",
+  "description": "Jeu de fusion de fruits : vise à la souris et lâche des fruits dans la caisse ; deux fruits pareils qui se touchent fusionnent en un plus gros, parfois en cascade. Onze fruits de la cerise à la citrouille, des fruits qui roulent et se poussent, et deux citrouilles qui disparaissent avec un gros bonus. La partie s'arrête quand un fruit reste au-dessus de la ligne rouge. Fruits plus gros et souriants, fusion animée, cuisine autour de la caisse, fruits gelés ou gâtés de temps en temps, manette, plein écran, s'adapte à la taille de l'écran. Un défi du jour : la même suite de fruits pour tout le monde.",
   "icon": "icon.png",
   "entry": "index.js",
   "view": "compote",

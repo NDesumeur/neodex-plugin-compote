@@ -4,6 +4,10 @@ A fruit-merging game: drop fruit into a crate, and when two identical fruits tou
 
 *Version française : [README.md](README.md)*
 
+## Daily challenge (new in 1.2.0)
+
+The **DAILY CHALLENGE** button starts a game where the fruit sequence (frozen and rotten ones included) is drawn from the date: everyone gets the same fruits all day long, so you can compare. Your best score of the day and your number of tries are kept, and **COPY MY DAILY SCORE** puts a ready-made sentence in the clipboard to send to your friends.
+
 ## Controls
 
 - **Mouse** or **← →**: aim; a line shows where the fruit will fall.

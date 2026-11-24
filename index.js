@@ -6,7 +6,8 @@ const HTML = `<div class="appWrap wide">
     <div class="gSide">
       <div class="sysCard"><b>RECORDS</b><div class="gStats" id="coStats"></div></div>
       <div class="sysCard"><b>LES FRUITS</b><canvas id="coChain" width="232" height="48"></canvas></div>
-      <div class="row"><button class="btn main" id="coNew">NOUVELLE PARTIE</button><button class="btn" id="coFs">PLEIN ÉCRAN</button></div>
+      <div class="row"><button class="btn main" id="coNew">NOUVELLE PARTIE</button><button class="btn" id="coDaily">DÉFI DU JOUR</button><button class="btn" id="coFs">PLEIN ÉCRAN</button></div>
+      <div class="hint">Défi du jour : la même suite de fruits pour tout le monde, toute la journée. <button class="btn" id="coCopy">COPIER MON SCORE DU JOUR</button></div>
       <div class="hint">Manette : croix ou stick pour viser, A pour lâcher, Start pour la pause.</div>
       <div class="hint">De temps en temps arrive un fruit gelé (il ne fusionne qu'une fois dégelé : attends, ou fais une fusion juste à côté) ou un fruit gâté (il ne fusionne jamais ; il pourrit et disparaît, ou s'écrase quand une fusion se fait contre lui).</div>
     </div></div>
@@ -382,12 +383,16 @@ const CO_ICE = FRUITS.slice(0, 5).map((f, i) => { const b = CO_SPR[i], c = el('c
   px(g, '#e8faff', o - a, o - a + 1, 1, a * 2 - 2); px(g, '#e8faff', o - a + 1, o - a, a * 2 - 2, 1); px(g, '#6ab8e8', o + a - 1, o - a + 1, 1, a * 2 - 2); px(g, '#6ab8e8', o - a + 1, o + a - 1, a * 2 - 2, 1);
   px(g, '#ffffff', o - a + 2, o - a + 2, 3, 1); px(g, '#ffffff', o - a + 2, o - a + 3, 1, 2); return c; });
 const coImg = f => f.ice ? CO_ICE[f.l] : f.rot ? CO_ROT[f.l] : CO_SPR[f.l];
-function coNew() {
-  co = Object.assign(co || {tick: 0, raf: 0}, {seen: co ? co.tick : 0, mode: 'ready', fruits: [], aim: CO.W / 2, cur: {l: Math.floor(Math.random() * 5)}, next: {l: Math.floor(Math.random() * 5)}, cool: 0, score: 0, danger: 0, pops: [], top: 0, record: false, dead: 0, drops: 0, merges: [], juice: []});
+// le défi du jour : une suite de fruits tirée d'après la date, la même pour tous
+const coDay = () => { const d = new Date(); return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate(); };
+const coToday = () => cos.daily?.day === coDay() ? cos.daily : null;
+function coNew(daily = false) {
+  const rnd = daily ? seeded(coDay()) : null, R = rnd || Math.random;
+  co = Object.assign(co || {tick: 0, raf: 0}, {seen: co ? co.tick : 0, daily, rnd, dayRec: false, mode: 'ready', fruits: [], aim: CO.W / 2, cur: {l: Math.floor(R() * 5)}, next: {l: Math.floor(R() * 5)}, cool: 0, score: 0, danger: 0, pops: [], top: 0, record: false, dead: 0, drops: 0, merges: [], juice: []});
 }
 function coPick() {  // le prochain fruit : après 15 lâchers, environ un sur huit est gelé ou gâté
-  const l = Math.floor(Math.random() * 5); if (!co || co.drops < 15 || Math.random() > .125) return {l};
-  return Math.random() < .5 ? {l, ice: 720} : {l, rot: 1200};
+  const R = co?.rnd || Math.random, l = Math.floor(R() * 5), sp = R(), kind = R(); if (!co || co.drops < 15 || sp > .125) return {l};
+  return kind < .5 ? {l, ice: 720} : {l, rot: 1200};
 }
 const coSpecImg = p => p.ice ? CO_ICE[p.l] : p.rot ? CO_ROT[p.l] : CO_SPR[p.l];
 let coac = null;
@@ -395,7 +400,7 @@ function coBeep(f, d, type = 'triangle', slide = 0) { try { coac ??= new AudioCo
 function coDrop() {
   if (co.mode === 'ready') { co.mode = 'play'; cos.games++; saveGames(); }
   if (co.mode === 'pause') { co.mode = 'play'; return; }
-  if (co.mode === 'over') { if (co.dead > 40) coNew(); return; }
+  if (co.mode === 'over') { if (co.dead > 40) coNew(co.daily); return; }
   if (co.cool) return;
   const p = co.cur, r = FRUITS[p.l][1]; co.fruits.push({x: Math.max(CO.L + r, Math.min(CO.R - r, co.aim)), y: CO.DROPY, vx: 0, vy: 0, l: p.l, r, age: 0, ice: p.ice || 0, rot: p.rot || 0});
   co.drops++; co.cur = co.next; co.next = coPick(); co.cool = 32; coBeep(p.ice ? 1200 : p.rot ? 160 : 300, .08);
@@ -441,7 +446,8 @@ function coUpdate() {
   for (const p of co.pops) p.t++; co.pops = co.pops.filter(p => p.t < 14);
   const high = co.fruits.some(f => f.age > 70 && f.y - f.r < CO.LINE && Math.abs(f.vy) < .6);
   co.danger = high ? co.danger + 1 : Math.max(0, co.danger - 2);
-  if (co.danger > 120) { co.mode = 'over'; co.dead = 0; co.record = best('compote', co.score); cos.top = Math.max(cos.top, co.top); saveGames(); coInfo(); coBeep(200, .6, 'sawtooth', 50); }
+  if (co.danger > 120) { co.mode = 'over'; co.dead = 0; co.record = best('compote', co.score); cos.top = Math.max(cos.top, co.top);
+    if (co.daily) { const d = coToday() || (cos.daily = {day: coDay(), best: 0, tries: 0}); d.tries++; if (co.score > d.best) { d.best = co.score; co.dayRec = true; } } saveGames(); coInfo(); coBeep(200, .6, 'sawtooth', 50); }
 }
 function coDraw() {
   const g = co.g, {W, H, L, R, FLOOR, LINE} = CO;
@@ -474,15 +480,15 @@ function coDraw() {
   for (const j of co.juice) px(g, j.c, j.x, j.y, j.t < 12 ? 2 : 1, j.t < 12 ? 2 : 1);
   for (const p of co.pops) { const rr = p.r + p.t * 1.5; g.strokeStyle = p.t % 4 < 2 ? '#ffffff' : FRUITS[Math.min(p.l, 10)][2]; g.lineWidth = 2; g.beginPath(); g.arc(Math.round(p.x), Math.round(p.y), rr, 0, 7); g.stroke(); }
   // score et fruit suivant
-  pxFont(g, String(co.score), 6, 14, '#ffffff', 12);
+  pxFont(g, String(co.score), 6, 14, '#ffffff', 12); if (co.daily) pxFont(g, 'DÉFI DU JOUR', 6, 24, '#ffd84a', 6);
   PXK.fill(g, 'SUIVANT', W - 34, 8, '#e0a8b4', PXK.scale(8), 'center'); const nr = FRUITS[co.next.l][1], sc = Math.min(1, 12 / nr);
   g.drawImage(coSpecImg(co.next), W - 34 - (nr + 5) * sc, 26 - (nr + 5) * sc, (nr * 2 + 10) * sc, (nr * 2 + 10) * sc);
-  if (co.mode === 'ready') gameText(g, W, [['COMPOTE', '#ff4a5a', 16], ['Clic pour lâcher un fruit', '#ffffff'], ['Deux pareils = un plus gros', '#e0a8b4'], ['Gelé ou gâté : pas de fusion', '#a8e8ff'], ['Record ' + (games.best.compote || 0), '#ffd84a']], 130);
+  if (co.mode === 'ready') gameText(g, W, [['COMPOTE', '#ff4a5a', 16], ['Clic pour lâcher un fruit', '#ffffff'], ['Deux pareils = un plus gros', '#e0a8b4'], ['Gelé ou gâté : pas de fusion', '#a8e8ff'], co.daily ? ['Défi du jour · meilleur ' + (coToday()?.best || 0), '#ffd84a'] : ['Record ' + (games.best.compote || 0), '#ffd84a']], 130);
   if (co.mode === 'pause') gameText(g, W, [['PAUSE', '#ffffff', 12], ['Clic pour reprendre', '#e0a8b4']], 140);
-  if (co.mode === 'over' && co.dead > 15) gameText(g, W, [['DÉBORDÉ !', '#ff4a5a', 14], ['Score ' + co.score, '#ffffff'], ['Plus gros fruit : ' + FRUITS[co.top][0], '#ffd84a'], [co.record ? 'NOUVEAU RECORD !' : 'Record ' + (games.best.compote || 0), '#7ee07a'], [co.dead > 40 ? 'Clic pour rejouer' : '', '#e0a8b4']], 120);
+  if (co.mode === 'over' && co.dead > 15) gameText(g, W, [['DÉBORDÉ !', '#ff4a5a', 14], ['Score ' + co.score, '#ffffff'], ...(co.daily ? [[co.dayRec ? 'MEILLEUR SCORE DU JOUR !' : 'Défi du jour : meilleur ' + coToday().best, '#ffb070']] : []), ['Plus gros fruit : ' + FRUITS[co.top][0], '#ffd84a'], [co.record ? 'NOUVEAU RECORD !' : 'Record ' + (games.best.compote || 0), '#7ee07a'], [co.dead > 40 ? 'Clic pour rejouer' : '', '#e0a8b4']], 120);
 }
 function coInfo() {
-  $('coStats').replaceChildren(...[['Meilleur score', games.best.compote || 0], ['Parties', cos.games], ['Plus gros fruit', FRUITS[cos.top][0]]].flatMap(([a, b]) => [el('span', '', a), el('b', '', String(b))]));
+  $('coStats').replaceChildren(...[['Meilleur score', games.best.compote || 0], ['Parties', cos.games], ['Plus gros fruit', FRUITS[cos.top][0]], ['Défi du jour', coToday() ? coToday().best + ' (' + coToday().tries + ' essai' + (coToday().tries > 1 ? 's' : '') + ')' : '—']].flatMap(([a, b]) => [el('span', '', a), el('b', '', String(b))]));
   const c = $('coChain'), g = c.getContext('2d'); g.clearRect(0, 0, c.width, c.height); let x = 2;
   const ws = FRUITS.map(([, r]) => (r * 2 + 10) * Math.min(1, 9 / r)), k = Math.min(1, (c.width - 4 - FRUITS.length) / ws.reduce((a, b) => a + b));  // les 11 fruits tiennent dans la largeur
   FRUITS.forEach((f, i) => { const w = ws[i] * k; g.globalAlpha = i <= cos.top + 1 ? 1 : .3; g.drawImage(CO_SPR[i], x, 24 - w / 2, w, w); x += w + 1; }); g.globalAlpha = 1;
@@ -514,6 +520,10 @@ document.addEventListener('keydown', e => {
 });
 document.addEventListener('keyup', e => { if (e.key === 'ArrowLeft') coKeys.L = false; if (e.key === 'ArrowRight') coKeys.R = false; });
 $('coNew').onclick = () => { coNew(); $('coNew').blur(); };
+$('coDaily').onclick = () => { coNew(true); $('coDaily').blur(); };
+$('coCopy').onclick = () => { $('coCopy').blur(); const d = coToday(); if (!d?.best) return toast('Joue d’abord le défi du jour');
+  const s = String(d.day), txt = 'Compote, défi du ' + s.slice(6) + '/' + s.slice(4, 6) + '/' + s.slice(0, 4) + ' : ' + d.best + ' points';
+  navigator.clipboard?.writeText(txt).then(() => toast('Copié : ' + txt), () => toast(txt)); };
 $('coFs').onclick = () => { $('coFs').blur(); try { if (document.fullscreenElement) document.exitFullscreen(); else cv.parentElement.requestFullscreen?.().catch(() => {}); } catch {} };
 {  // la manette : croix ou stick gauche pour viser, A (ou B) pour lâcher, Start pour la pause
   let prev = [];
@@ -538,7 +548,8 @@ function coCheck() {  // vérification : deux cerises qui se touchent donnent un
   co.fruits = [{x: 60, y: 260, vx: 0, vy: 0, l: 0, r: R(0), age: 0, ice: 500}, {x: 70, y: 260, vx: 0, vy: 0, l: 0, r: R(0), age: 0}]; coStep(); const iceHolds = co.fruits.length === 2;
   co.fruits.push({x: 90, y: 262, vx: 0, vy: 0, l: 1, r: R(1), age: 0, rot: 900}, {x: 70, y: 240, vx: 0, vy: 0, l: 3, r: R(3), age: 0}, {x: 70, y: 220, vx: 0, vy: 0, l: 3, r: R(3), age: 0});
   coMerge(co.fruits[3], co.fruits[4]); coStep(); const thaw = co.fruits.filter(f => f.l === 0).every(f => !f.ice) && !co.fruits.some(f => f.rot);
-  const bad = Object.entries({merged, apart, rest, iceHolds, thaw}).filter(([, v]) => !v).map(([k]) => k);
+  const seq = () => { co = null; coNew(true); co.drops = 20; return JSON.stringify([co.cur, co.next, ...Array.from({length: 40}, coPick)]); }, s1 = seq(), same = s1 === seq() && /ice|rot/.test(s1);
+  const bad = Object.entries({merged, apart, rest, iceHolds, thaw, same}).filter(([, v]) => !v).map(([k]) => k);
   co = keep;
   return bad.length ? bad.join(', ') : 'ok';
 }

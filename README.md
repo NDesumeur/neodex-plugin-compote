@@ -4,6 +4,10 @@ Un jeu de fusion de fruits : lâche des fruits dans une caisse, et quand deux fr
 
 *English version: [README.en.md](README.en.md)*
 
+## Défi du jour (nouveau en 1.2.0)
+
+Le bouton **DÉFI DU JOUR** lance une partie où la suite de fruits (gelés et gâtés compris) est tirée d'après la date : tout le monde a les mêmes fruits toute la journée, de quoi se comparer. Ton meilleur score du jour et ton nombre d'essais sont gardés, et **COPIER MON SCORE DU JOUR** met une phrase toute prête dans le presse-papiers pour l'envoyer à tes amis.
+
 ## Commandes
 
 - **Souris** ou **← →** : viser ; un trait montre où le fruit va tomber.

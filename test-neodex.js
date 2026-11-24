@@ -30,6 +30,12 @@ module.exports = async ({ pj, sleep }) => {
   await pj(`(__pad.buttons[9].pressed = true, 0)`); await sleep(120); await pj(`(__pad.buttons[9].pressed = false, 0)`); await sleep(120);
   if (await C('return co.mode;') !== 'pause') throw new Error('Start ne met pas en pause');
   await pj(`navigator.getGamepads = () => [], 0`);
+  // le défi du jour : deux départs donnent les mêmes premiers fruits
+  const day = [];
+  for (let k = 0; k < 2; k++) { await pj(`document.getElementById('coDaily').click(), 0`); await sleep(150); day.push(await C(`return co.daily + ':' + co.cur.l + ',' + co.next.l;`)); }
+  await sleep(200); await shot('9-defi-du-jour');
+  if (day[0] !== day[1] || !day[0].startsWith('true')) throw new Error('défi du jour : ' + day);
+  await pj(`document.getElementById('coNew').click(), 0`);
   const errs = await pj(`window.__e.join(' | ')`); if (errs) throw new Error('erreur : ' + errs);
   // plein écran, et la zone de jeu qui tient dans la fenêtre
   await pj(`document.getElementById('coFs').click(), 0`); await sleep(700);

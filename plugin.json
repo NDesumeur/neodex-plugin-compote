@@ -1,7 +1,7 @@
 {
   "id": "neodex.compote",
   "name": "Compote",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "author": "NDesumeur",
   "description": "Jeu de fusion de fruits : vise à la souris et lâche des fruits dans la caisse ; deux fruits pareils qui se touchent fusionnent en un plus gros, parfois en cascade. Onze fruits de la cerise à la citrouille, des fruits qui roulent et se poussent, et deux citrouilles qui disparaissent avec un gros bonus. La partie s'arrête quand un fruit reste au-dessus de la ligne rouge. Fruits plus gros et souriants, fusion animée, cuisine autour de la caisse, fruits gelés ou gâtés de temps en temps, manette, plein écran, s'adapte à la taille de l'écran. Un défi du jour : la même suite de fruits pour tout le monde.",
   "icon": "icon.png",
@@ -22,5 +22,51 @@
   "sdk": "2.1.0",
   "permissions": [
     "storage"
+  ],
+  "succes": [
+    {
+      "id": "premier",
+      "nom": "Première caisse",
+      "texte": "Finir une première partie"
+    },
+    {
+      "id": "melon",
+      "nom": "Un beau melon",
+      "texte": "Faire pousser un melon"
+    },
+    {
+      "id": "pasteque",
+      "nom": "Pastèque !",
+      "texte": "Faire pousser une pastèque"
+    },
+    {
+      "id": "citrouille",
+      "nom": "Le fruit géant",
+      "texte": "Faire pousser la citrouille",
+      "cache": true
+    },
+    {
+      "id": "s1000",
+      "nom": "Bonne récolte",
+      "texte": "Marquer 1 000 points en une partie"
+    },
+    {
+      "id": "s3000",
+      "nom": "Verger d'or",
+      "texte": "Marquer 3 000 points en une partie"
+    },
+    {
+      "id": "vingt",
+      "nom": "Confiturier",
+      "texte": "Jouer 20 parties"
+    }
+  ],
+  "records": [
+    {
+      "id": "score",
+      "nom": "Meilleur score",
+      "sens": "haut",
+      "format": "nombre"
+    }
   ]
 }

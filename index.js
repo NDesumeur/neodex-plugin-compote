@@ -307,6 +307,9 @@ export default async function (ctx) {
   const saveGames = () => { clearTimeout(gamesTimer); gamesTimer = setTimeout(() => { gamesTimer = null; folder.write('games', games).catch(() => {}); }, 500); };
   const best = (k, v) => { const b = games.best[k]; if (b == null || v > b) { games.best[k] = v; saveGames(); return true; } return false; };
   const gstore = (k, init) => (games[k] ??= init);
+  // les trophées de NeoDex (3.4.8 et plus) : succès et records déclarés dans plugin.json ; sur un NeoDex plus ancien, rien ne se passe
+  const trophy = id => { ctx.games?.unlock(id).catch(() => {}); };
+  const trophyRecord = (id, v) => { if (v != null && Number.isFinite(+v)) ctx.games?.record(id, +v).catch(() => {}); };
 function gameLoop(st, appKey, update, draw) {
   cancelAnimationFrame(st.raf);
   const STEP = 1000 / 60; let acc = 0, last = performance.now();
@@ -488,6 +491,7 @@ function coDraw() {
   if (co.mode === 'over' && co.dead > 15) gameText(g, W, [['DÉBORDÉ !', '#ff4a5a', 14], ['Score ' + co.score, '#ffffff'], ...(co.daily ? [[co.dayRec ? 'MEILLEUR SCORE DU JOUR !' : 'Défi du jour : meilleur ' + coToday().best, '#ffb070']] : []), ['Plus gros fruit : ' + FRUITS[co.top][0], '#ffd84a'], [co.record ? 'NOUVEAU RECORD !' : 'Record ' + (games.best.compote || 0), '#7ee07a'], [co.dead > 40 ? 'Clic pour rejouer' : '', '#e0a8b4']], 120);
 }
 function coInfo() {
+  setTimeout(coTrophies);
   $('coStats').replaceChildren(...[['Meilleur score', games.best.compote || 0], ['Parties', cos.games], ['Plus gros fruit', FRUITS[cos.top][0]], ['Défi du jour', coToday() ? coToday().best + ' (' + coToday().tries + ' essai' + (coToday().tries > 1 ? 's' : '') + ')' : '—']].flatMap(([a, b]) => [el('span', '', a), el('b', '', String(b))]));
   const c = $('coChain'), g = c.getContext('2d'); g.clearRect(0, 0, c.width, c.height); let x = 2;
   const ws = FRUITS.map(([, r]) => (r * 2 + 10) * Math.min(1, 9 / r)), k = Math.min(1, (c.width - 4 - FRUITS.length) / ws.reduce((a, b) => a + b));  // les 11 fruits tiennent dans la largeur
@@ -555,6 +559,13 @@ function coCheck() {  // vérification : deux cerises qui se touchent donnent un
 }
 console.assert(coCheck() === 'ok', 'compote', coCheck());
 cv.__co = {st: () => co, check: coCheck, FRUITS, CO};
+// les trophées, tirés des statistiques et des records gardés (aussi à l'ouverture : ce qui a été fait avant compte)
+function coTrophies() {
+  const b = games.best.compote, n = FRUITS.map(f => f[0]), sig = [b, cos.games, cos.top].join(); if (sig === coTrophies.sig) return; coTrophies.sig = sig;
+  trophyRecord('score', b || null);
+  if (b != null) trophy('premier'); if (cos.top >= n.indexOf('melon')) trophy('melon'); if (cos.top >= n.indexOf('pastèque')) trophy('pasteque'); if (cos.top >= n.indexOf('citrouille')) trophy('citrouille');
+  if (b >= 1000) trophy('s1000'); if (b >= 3000) trophy('s3000'); if (cos.games >= 20) trophy('vingt');
+}
 ctx.onOpen(() => {
   if (!co || !co.g) { coNew(); co.g = cv.getContext('2d'); }
   gameLoop(co, 'compote', coUpdate, coDraw); coInfo();
